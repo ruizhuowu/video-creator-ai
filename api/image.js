@@ -41,9 +41,9 @@ async function generateImage(apiKey, prompt, sceneId) {
     body: JSON.stringify({
       model: 'black-forest-labs/FLUX.1-schnell',
       prompt: prompt,
-      image_size: '576x1024',
+      image_size: '512x1024',
       num_inference_steps: 4,
-      batch_size: 1
+      n: 1
     })
   });
 
