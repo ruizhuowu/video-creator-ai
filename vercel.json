@@ -2,6 +2,6 @@
   "functions": {
     "api/topics.js": { "maxDuration": 30 },
     "api/create.js": { "maxDuration": 60 },
-    "api/image.js": { "maxDuration": 30 }
+    "api/image.js": { "maxDuration": 60}
   }
 }
