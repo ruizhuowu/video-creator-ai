@@ -52,11 +52,11 @@ export default async function handler(req, res) {
 
     // ===== Agent 2: 提示词员 =====
     const promptRaw = await callLLM(API_KEY, `
-你是一个专业的AI绘图提示词专家，精通FLUX模型的英文提示词写法。
+你是一个专业的AI绘图提示词专家，精通Kolors等图像模型的提示词写法。
 
 视频风格：${style}，画面基调：${scene_style}
 
-以下是视频5个分镜的画面描述，请为每个分镜生成高质量英文FLUX提示词：
+以下是视频5个分镜的画面描述，请为每个分镜生成高质量英文提示词：
 
 ${scriptData.scenes.map(s => `分镜${s.id}（${s.emotion}）：${s.visual}`).join('\n')}
 
@@ -64,8 +64,8 @@ ${scriptData.scenes.map(s => `分镜${s.id}（${s.emotion}）：${s.visual}`).jo
 1. 纯英文
 2. 结构：[主体描述], [场景环境], [光线氛围], [画风], [质量标签]
 3. 竖屏构图，适合手机短视频
-4. 画风：${style === '搞笑沙雕' ? 'comic style, exaggerated expressions, vibrant colors, cartoon-like' : 'cinematic, photorealistic, detailed'}
-5. 结尾必须加：vertical composition, 9:16 aspect ratio, high quality, 8k resolution
+4. 画风：${style === '搞笑沙雕' ? 'comic style, exaggerated expressions, vibrant colors, cartoon-like characters' : 'cinematic, photorealistic, highly detailed'}
+5. 结尾必须加：portrait orientation, 9:16 aspect ratio, high quality, masterpiece
 
 请只返回如下JSON：
 {
