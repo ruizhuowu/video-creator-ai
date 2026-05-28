@@ -394,6 +394,66 @@
   .generate-images-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,58,237,0.4); }
   .generate-images-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
+  /* Video generation */
+  .generate-videos-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #0ea5e9, #7c3aed);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+  }
+  .generate-videos-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(14,165,233,0.4); }
+  .generate-videos-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .video-card {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    text-align: center;
+  }
+  .video-card video {
+    width: 100%;
+    aspect-ratio: 9/16;
+    object-fit: cover;
+    display: block;
+  }
+  .video-card .video-placeholder {
+    width: 100%;
+    aspect-ratio: 9/16;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #0a0a14;
+    color: var(--muted);
+    font-size: 12px;
+    gap: 6px;
+  }
+  .video-card .video-label {
+    padding: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+  .video-progress {
+    font-size: 11px;
+    color: var(--gold);
+    margin-top: 4px;
+  }
+
   /* Caption Tab */
   .platform-block {
     border-radius: 12px;
@@ -607,9 +667,18 @@
     <!-- Images Tab -->
     <div class="tab-content" id="tab-images">
       <button class="generate-images-btn" id="gen-images-btn" onclick="generateImages()">
-        🖼️ 生成5张分镜AI图片（FLUX模型）
+        🖼️ 生成5张分镜AI图片（Kolors模型）
       </button>
       <div class="images-grid" id="images-grid"></div>
+
+      <!-- Video Generation -->
+      <div id="video-section" style="display:none; margin-top:20px; border-top:1px solid var(--border); padding-top:20px;">
+        <button class="generate-videos-btn" id="gen-videos-btn" onclick="generateVideos()">
+          🎬 升级：生成AI视频片段（Wan2.1模型，约需2分钟）
+        </button>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;margin-top:-10px;">每段视频约3-5秒，每段消耗约¥0.2-0.5元</div>
+        <div class="video-grid" id="video-grid"></div>
+      </div>
     </div>
 
     <!-- Captions Tab -->
@@ -852,7 +921,7 @@
     if (!resultData?.prompts?.length) return;
     const btn = document.getElementById('gen-images-btn');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> FLUX生图中，约需30秒...';
+    btn.innerHTML = '<span class="spinner"></span> Kolors生图中，约需30秒...';
 
     // Set loading state on all image cards
     (resultData.prompts || []).forEach(p => {
@@ -898,6 +967,8 @@
 
       btn.textContent = '🔄 重新生成图片';
       btn.disabled = false;
+      // 图片生成完后显示视频生成区
+      document.getElementById('video-section').style.display = 'block';
     } catch (e) {
       alert('❌ 图片生成失败: ' + e.message);
       btn.disabled = false;
@@ -912,6 +983,111 @@
   function setAgentDone(name) {
     document.getElementById('agent-' + name).className = 'agent-node done';
     document.getElementById('status-' + name).textContent = '✅ 完成';
+  }
+
+  // ===== Generate Videos =====
+  async function generateVideos() {
+    if (!resultData?.prompts?.length) return;
+    const btn = document.getElementById('gen-videos-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> 提交视频任务中...';
+
+    const grid = document.getElementById('video-grid');
+    grid.innerHTML = resultData.prompts.map(p => `
+      <div class="video-card" id="vid-card-${p.scene_id}">
+        <div class="video-placeholder">
+          <span style="font-size:28px">🎬</span>
+          <span>分镜${p.scene_id}</span>
+          <span class="video-progress" id="vid-status-${p.scene_id}">等待提交...</span>
+        </div>
+        <div class="video-label">${p.zh_desc || ''}</div>
+      </div>
+    `).join('');
+
+    // 提交所有任务
+    const jobs = [];
+    for (const p of resultData.prompts) {
+      try {
+        document.getElementById('vid-status-' + p.scene_id).textContent = '提交中...';
+        const res = await fetch('/api/video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: p.prompt, scene_id: p.scene_id })
+        });
+        const data = await res.json();
+        if (data.success && data.requestId) {
+          jobs.push({ requestId: data.requestId, scene_id: p.scene_id });
+          document.getElementById('vid-status-' + p.scene_id).textContent = '排队中...';
+        } else {
+          document.getElementById('vid-status-' + p.scene_id).textContent = '提交失败: ' + (data.details || data.error);
+        }
+      } catch (e) {
+        document.getElementById('vid-status-' + p.scene_id).textContent = '提交出错';
+      }
+    }
+
+    btn.innerHTML = `<span class="spinner"></span> 生成中（${jobs.length}个任务），请等待约2分钟...`;
+
+    // 轮询所有任务状态
+    let pending = [...jobs];
+    let tries = 0;
+    const maxTries = 60; // 最多轮询60次，每次5秒 = 5分钟
+
+    while (pending.length > 0 && tries < maxTries) {
+      await new Promise(r => setTimeout(r, 5000));
+      tries++;
+
+      const stillPending = [];
+      for (const job of pending) {
+        try {
+          const res = await fetch('/api/video-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requestId: job.requestId })
+          });
+          const data = await res.json();
+
+          if (data.status === 'Succeed' && data.url) {
+            // 替换占位符为视频播放器
+            const card = document.getElementById('vid-card-' + job.scene_id);
+            if (card) {
+              const placeholder = card.querySelector('.video-placeholder');
+              if (placeholder) {
+                const video = document.createElement('video');
+                video.src = data.url;
+                video.controls = true;
+                video.autoplay = false;
+                video.loop = true;
+                video.style.width = '100%';
+                card.insertBefore(video, placeholder);
+                placeholder.remove();
+              }
+            }
+          } else if (data.status === 'Failed') {
+            const st = document.getElementById('vid-status-' + job.scene_id);
+            if (st) st.textContent = '生成失败';
+          } else {
+            // 还在处理中
+            const st = document.getElementById('vid-status-' + job.scene_id);
+            if (st) st.textContent = data.status === 'InQueue' ? '排队中...' : '生成中...';
+            stillPending.push(job);
+          }
+        } catch (e) {
+          stillPending.push(job);
+        }
+      }
+      pending = stillPending;
+    }
+
+    if (pending.length > 0) {
+      pending.forEach(job => {
+        const st = document.getElementById('vid-status-' + job.scene_id);
+        if (st) st.textContent = '超时，请刷新重试';
+      });
+    }
+
+    btn.disabled = false;
+    btn.textContent = pending.length === 0 ? '✅ 所有视频生成完成！' : '🔄 重新生成视频';
   }
 
   // ===== Tabs =====
