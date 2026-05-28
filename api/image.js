@@ -11,45 +11,45 @@ export default async function handler(req, res) {
   const { prompts = [] } = req.body || {};
   if (!prompts.length) return res.status(400).json({ error: '请提供图片提示词' });
 
-  try {
-    // 并发生成所有分镜图片
-    const results = await Promise.allSettled(
-      prompts.map(p => generateImage(API_KEY, p.prompt, p.scene_id))
-    );
-
-    const images = results.map((r, i) => {
-      if (r.status === 'fulfilled') {
-        return { scene_id: prompts[i].scene_id, url: r.value, success: true };
-      } else {
-        return { scene_id: prompts[i].scene_id, url: null, success: false, error: r.reason?.message };
-      }
-    });
-
-    return res.status(200).json({ success: true, images });
-  } catch (err) {
-    return res.status(500).json({ error: '图片生成失败', details: err.message });
+  // 顺序生成，避免并发限流
+  const images = [];
+  for (const p of prompts) {
+    try {
+      const url = await generateImage(API_KEY, p.prompt, p.scene_id);
+      images.push({ scene_id: p.scene_id, url, success: true });
+    } catch (e) {
+      images.push({ scene_id: p.scene_id, url: null, success: false, error: e.message });
+    }
   }
+
+  return res.status(200).json({ success: true, images });
 }
 
 async function generateImage(apiKey, prompt, sceneId) {
+  const body = {
+    model: 'black-forest-labs/FLUX.1-schnell',
+    prompt: prompt,
+    image_size: '768x1024',
+    num_inference_steps: 4
+  };
+
   const res = await fetch('https://api.siliconflow.cn/v1/images/generations', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
-    body: JSON.stringify({
-      model: 'black-forest-labs/FLUX.1-schnell',
-      prompt: prompt,
-      image_size: '512x1024',
-      num_inference_steps: 4,
-      n: 1
-    })
+    body: JSON.stringify(body)
   });
 
   const data = await res.json();
-  if (!data.images || !data.images[0]?.url) {
-    throw new Error(`分镜${sceneId}生图失败: ` + JSON.stringify(data));
+
+  // 返回详细错误帮助排查
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${JSON.stringify(data)}`);
+  }
+  if (!data.images?.[0]?.url) {
+    throw new Error(`无图片URL: ${JSON.stringify(data)}`);
   }
   return data.images[0].url;
 }
