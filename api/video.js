@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     if (image_url) {
       // 图生视频 I2V：基于分镜图生成，人物一致性更好
       body = {
-        model: 'Wan-AI/Wan2.1-I2V-01-480P',
+        model: 'Wan2.2-I2V-A14B',
         image: image_url,
         prompt: prompt,
         negative_prompt: 'blurry, low quality, distorted, static, no movement',
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     } else {
       // 纯文生视频 T2V（备用）
       body = {
-        model: 'Wan-AI/Wan2.1-T2V-01-480P',
+        model: 'Wan2.2-T2V-A14B',
         prompt: prompt,
         negative_prompt: 'blurry, low quality, distorted, ugly',
         image_size: '480x832',
