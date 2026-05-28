@@ -8,23 +8,39 @@ export default async function handler(req, res) {
   const API_KEY = process.env.SILICONFLOW_API_KEY;
   if (!API_KEY) return res.status(500).json({ error: 'SILICONFLOW_API_KEY未配置' });
 
-  const { prompt, scene_id } = req.body || {};
+  const { prompt, scene_id, image_url } = req.body || {};
   if (!prompt) return res.status(400).json({ error: '请提供视频提示词' });
 
   try {
+    let body;
+
+    if (image_url) {
+      // 图生视频 I2V：基于分镜图生成，人物一致性更好
+      body = {
+        model: 'Wan-AI/Wan2.1-I2V-01-480P',
+        image: image_url,
+        prompt: prompt,
+        negative_prompt: 'blurry, low quality, distorted, static, no movement',
+        seed: Math.floor(Math.random() * 9999999)
+      };
+    } else {
+      // 纯文生视频 T2V（备用）
+      body = {
+        model: 'Wan-AI/Wan2.1-T2V-01-480P',
+        prompt: prompt,
+        negative_prompt: 'blurry, low quality, distorted, ugly',
+        image_size: '480x832',
+        seed: Math.floor(Math.random() * 9999999)
+      };
+    }
+
     const res2 = await fetch('https://api.siliconflow.cn/v1/video/submit', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${API_KEY}`
       },
-      body: JSON.stringify({
-        model: 'Wan-AI/Wan2.1-T2V-01-480P',
-        prompt: prompt,
-        negative_prompt: 'blurry, low quality, distorted, ugly, bad anatomy',
-        image_size: '480x832',
-        seed: Math.floor(Math.random() * 9999999)
-      })
+      body: JSON.stringify(body)
     });
 
     const data = await res2.json();
@@ -39,7 +55,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       requestId: data.requestId,
-      scene_id: scene_id
+      scene_id: scene_id,
+      mode: image_url ? 'I2V' : 'T2V'
     });
 
   } catch (err) {
