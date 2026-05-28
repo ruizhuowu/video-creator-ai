@@ -5,73 +5,43 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: '仅支持POST请求' });
 
-  const ACCESS_KEY = process.env.KLING_ACCESS_KEY;
-  const SECRET_KEY = process.env.KLING_SECRET_KEY;
-  if (!ACCESS_KEY || !SECRET_KEY) {
-    return res.status(500).json({ error: 'KLING密钥未配置' });
+  const API_KEY = process.env.SILICONFLOW_API_KEY;
+  if (!API_KEY) {
+    return res.status(500).json({ error: 'SILICONFLOW_API_KEY 未配置' });
   }
 
-  const { requestId, mode } = req.body || {};
+  const { requestId } = req.body || {};
   if (!requestId) return res.status(400).json({ error: '请提供requestId' });
 
   try {
-    const token = await generateJWT(ACCESS_KEY, SECRET_KEY);
-    const endpoint = mode === 'T2V'
-      ? `https://api.klingai.com/v1/videos/text2video/${requestId}`
-      : `https://api.klingai.com/v1/videos/image2video/${requestId}`;
-
-    const resp = await fetch(endpoint, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const resp = await fetch('https://api.siliconflow.cn/v1/video/status', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`
+      },
+      body: JSON.stringify({ requestId })
     });
 
     const data = await resp.json();
-    const status = data.data?.task_status; // submitted | processing | succeed | failed
+    const status = data.status;
 
     let mappedStatus;
-    if (status === 'succeed') mappedStatus = 'Succeed';
-    else if (status === 'failed') mappedStatus = 'Failed';
+    if (status === 'Succeed') mappedStatus = 'Succeed';
+    else if (status === 'Failed') mappedStatus = 'Failed';
     else mappedStatus = 'InProgress';
 
-    const url = data.data?.task_result?.videos?.[0]?.url || null;
+    const url = data.results?.videos?.[0]?.url || null;
 
     return res.status(200).json({
       success: true,
       status: mappedStatus,
       url,
-      raw: status
+      raw: status,
+      reason: data.reason || null
     });
 
   } catch (err) {
     return res.status(500).json({ error: '查询失败', details: err.message });
   }
-}
-
-async function generateJWT(accessKey, secretKey) {
-  const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const now = Math.floor(Date.now() / 1000);
-  const payload = base64url(JSON.stringify({
-    iss: accessKey,
-    exp: now + 1800,
-    nbf: now - 5
-  }));
-  const data = `${header}.${payload}`;
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secretKey),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
-  return `${data}.${base64url(sig)}`;
-}
-
-function base64url(input) {
-  let str;
-  if (typeof input === 'string') {
-    str = btoa(unescape(encodeURIComponent(input)));
-  } else {
-    str = btoa(String.fromCharCode(...new Uint8Array(input)));
-  }
-  return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
