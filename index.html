@@ -674,7 +674,7 @@
       <!-- Video Generation -->
       <div id="video-section" style="display:none; margin-top:20px; border-top:1px solid var(--border); padding-top:20px;">
         <button class="generate-videos-btn" id="gen-videos-btn" onclick="generateVideos()">
-          🎬 升级：生成AI视频片段（Wan2.1模型，约需2分钟）
+          🎬 基于分镜图生成视频（I2V模式，人物更一致，约需2分钟）
         </button>
         <div style="font-size:12px;color:var(--muted);margin-bottom:12px;margin-top:-10px;">每段视频约3-5秒，每段消耗约¥0.2-0.5元</div>
         <div class="video-grid" id="video-grid"></div>
@@ -698,6 +698,7 @@
   let selectedStyle = '搞笑沙雕';
   let selectedTopic = null;
   let resultData = null;
+  let generatedImageUrls = {}; // scene_id -> url，供I2V使用
   const BASE = '';
 
   // ===== Style =====
@@ -951,6 +952,7 @@
         const card = document.getElementById('img-card-' + img.scene_id);
         if (!card) return;
         if (img.success && img.url) {
+          generatedImageUrls[img.scene_id] = img.url; // 存图片URL供I2V使用
           card.querySelector('.img-placeholder')?.remove();
           const existing = card.querySelector('img');
           if (!existing) {
@@ -1009,10 +1011,11 @@
     for (const p of resultData.prompts) {
       try {
         document.getElementById('vid-status-' + p.scene_id).textContent = '提交中...';
+        const imageUrl = generatedImageUrls[p.scene_id] || null;
         const res = await fetch('/api/video', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: p.prompt, scene_id: p.scene_id })
+          body: JSON.stringify({ prompt: p.prompt, scene_id: p.scene_id, image_url: imageUrl })
         });
         const data = await res.json();
         if (data.success && data.requestId) {
