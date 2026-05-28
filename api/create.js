@@ -140,7 +140,16 @@ async function callLLM(apiKey, prompt) {
       max_tokens: 3000
     })
   });
-  const data = await res.json();
-  if (!data.choices) throw new Error('API返回异常: ' + JSON.stringify(data));
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('硅基流动返回错误: ' + text.slice(0, 300));
+  }
+  if (!data.choices) {
+    const msg = data.message || data.error?.message || JSON.stringify(data);
+    throw new Error('API调用失败: ' + msg);
+  }
   return data.choices[0].message.content;
 }
