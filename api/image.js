@@ -27,9 +27,9 @@ export default async function handler(req, res) {
 
 async function generateImage(apiKey, prompt, sceneId) {
   const body = {
-    model: 'black-forest-labs/FLUX.1-schnell',
+    model: 'Kwai-Kolors/Kolors',
     prompt: prompt,
-    image_size: '768x1024',
+    image_size: '720x1280',
     num_inference_steps: 4
   };
 
