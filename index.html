@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI爆款内容策划 · 实时热点 + 多平台文案</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f0f1a;
+    --card: #1a1a2e;
+    --card2: #16213e;
+    --accent: #e94560;
+    --gold: #f5a623;
+    --purple: #7c3aed;
+    --pink: #ec4899;
+    --green: #10b981;
+    --blue: #3b82f6;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: rgba(255,255,255,0.08);
+  }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; min-height: 100vh; }
+
+  .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(233,69,96,0.15) 0%, transparent 70%);
+  }
+  .header h1 {
+    font-size: clamp(20px, 4vw, 32px);
+    font-weight: 800;
+    background: linear-gradient(135deg, #f5a623, #e94560, #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    position: relative;
+  }
+  .header p { color: var(--muted); margin-top: 8px; font-size: 14px; position: relative; }
+  .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--green), #059669);
+    color: white; font-size: 11px; padding: 2px 10px;
+    border-radius: 20px; margin-left: 8px; font-weight: 600; vertical-align: middle;
+  }
+  .badge-live {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent), #dc2626);
+    color: white; font-size: 11px; padding: 2px 10px;
+    border-radius: 20px; margin-left: 6px; font-weight: 600; vertical-align: middle;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .section-title {
+    font-size: 16px; font-weight: 700; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .step-num {
+    width: 26px; height: 26px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+
+  /* Style buttons */
+  .style-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .style-btn {
+    background: var(--card2); border: 2px solid var(--border); border-radius: 12px;
+    padding: 12px 8px; cursor: pointer; text-align: center; transition: all 0.2s; color: var(--text); font-size: 13px;
+  }
+  .style-btn:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .style-btn.active { border-color: var(--accent); background: rgba(233,69,96,0.1); }
+  .style-btn .emoji { font-size: 24px; display: block; margin-bottom: 6px; }
+
+  .generate-btn {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border: none; border-radius: 12px; color: white; font-size: 16px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(233,69,96,0.4); }
+  .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Topics */
+  #topics-section { display: none; }
+  .trend-banner {
+    background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1));
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;
+    font-size: 12px; color: var(--green); display: flex; align-items: center; gap: 6px;
+  }
+  .topics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .topic-card {
+    background: var(--card2); border: 2px solid var(--border); border-radius: 12px;
+    padding: 14px; cursor: pointer; transition: all 0.2s;
+  }
+  .topic-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+  .topic-card.selected { border-color: var(--gold); background: rgba(245,166,35,0.08); }
+  .topic-card .title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .topic-card .hook { font-size: 12px; color: var(--muted); margin-bottom: 6px; line-height: 1.4; }
+  .topic-card .conflict { font-size: 11px; color: #f87171; margin-bottom: 8px; }
+  .topic-card .meta { display: flex; justify-content: space-between; align-items: center; }
+  .topic-card .platform { font-size: 11px; color: var(--pink); }
+  .viral-score { font-size: 12px; font-weight: 700; background: linear-gradient(135deg, var(--gold), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+  .custom-input-row { display: flex; gap: 10px; margin-top: 12px; }
+  .custom-input-row input {
+    flex: 1; background: var(--card2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; color: var(--text); font-size: 14px; outline: none; transition: border-color 0.2s;
+  }
+  .custom-input-row input:focus { border-color: var(--accent); }
+  .custom-input-row button {
+    padding: 10px 18px; background: var(--gold); border: none; border-radius: 10px;
+    color: #000; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+
+  /* Pipeline */
+  #pipeline-section { display: none; }
+  .pipeline { display: flex; align-items: center; gap: 0; overflow-x: auto; padding: 8px 0; }
+  .agent-node {
+    flex-shrink: 0; text-align: center; padding: 12px 16px; border-radius: 12px;
+    border: 2px solid var(--border); background: var(--card2); min-width: 90px; transition: all 0.3s;
+  }
+  .agent-node.active { border-color: var(--gold); background: rgba(245,166,35,0.1); box-shadow: 0 0 20px rgba(245,166,35,0.2); }
+  .agent-node.done { border-color: var(--green); background: rgba(16,185,129,0.08); }
+  .agent-node .emoji { font-size: 22px; display: block; }
+  .agent-node .name { font-size: 11px; margin-top: 4px; color: var(--muted); }
+  .agent-node .status { font-size: 10px; margin-top: 2px; }
+  .pipeline-arrow { flex-shrink: 0; color: var(--muted); padding: 0 6px; font-size: 18px; }
+  .progress-log {
+    margin-top: 14px; background: #0a0a14; border-radius: 10px; padding: 12px 16px;
+    font-size: 12px; color: var(--muted); font-family: 'Courier New', monospace;
+    min-height: 60px; max-height: 140px; overflow-y: auto;
+  }
+  .log-ok { color: var(--green); }
+  .log-active { color: var(--gold); }
+
+  /* Results */
+  #result-section { display: none; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 0; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 10px 16px; background: none; border: none; color: var(--muted); font-size: 13px;
+    font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.2s;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Script */
+  .script-header {
+    background: linear-gradient(135deg, rgba(233,69,96,0.1), rgba(124,58,237,0.1));
+    border: 1px solid rgba(233,69,96,0.2); border-radius: 12px; padding: 16px; margin-bottom: 16px;
+  }
+  .script-header h2 { font-size: 18px; margin-bottom: 4px; }
+  .hook-badge {
+    display: inline-block; background: rgba(233,69,96,0.15); color: #f87171;
+    font-size: 12px; padding: 3px 10px; border-radius: 6px; margin-top: 6px;
+  }
+  .scene-card {
+    background: var(--card2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; margin-bottom: 12px; display: grid; grid-template-columns: 36px 1fr; gap: 12px;
+  }
+  .scene-num {
+    width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--purple));
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px; flex-shrink: 0;
+  }
+  .scene-dialogue { font-size: 16px; font-weight: 700; color: var(--gold); margin-bottom: 6px; line-height: 1.5; }
+  .scene-caption { font-size: 13px; color: #60a5fa; margin-bottom: 6px; font-style: italic; }
+  .scene-visual { font-size: 13px; color: var(--muted); margin-bottom: 8px; line-height: 1.6; }
+  .scene-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; }
+  .tag-emotion { background: rgba(236,72,153,0.15); color: var(--pink); }
+  .tag-camera { background: rgba(124,58,237,0.15); color: #a78bfa; }
+  .tag-time { background: rgba(16,185,129,0.15); color: var(--green); }
+
+  /* Prompts */
+  .prompt-card {
+    background: var(--card2); border: 1px solid rgba(59,130,246,0.2); border-radius: 12px;
+    padding: 16px; margin-bottom: 14px;
+  }
+  .prompt-card .prompt-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+  }
+  .prompt-card .prompt-title { font-size: 14px; font-weight: 700; color: var(--blue); }
+  .prompt-card .style-note { font-size: 11px; color: var(--muted); }
+  .prompt-block { margin-bottom: 10px; }
+  .prompt-label {
+    font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 4px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .prompt-label .tool-tag {
+    background: rgba(245,166,35,0.15); color: var(--gold);
+    font-size: 10px; padding: 1px 6px; border-radius: 4px;
+  }
+  .prompt-text {
+    background: #0a0a14; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12px; font-family: 'Courier New', monospace;
+    color: #a5f3fc; line-height: 1.6; word-break: break-all; position: relative;
+  }
+  .copy-inline {
+    margin-top: 6px; padding: 4px 12px; background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border); border-radius: 6px; color: var(--muted);
+    font-size: 11px; cursor: pointer; transition: all 0.15s;
+  }
+  .copy-inline:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+
+  /* Platform captions */
+  .platform-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .plat-btn {
+    padding: 8px 18px; border-radius: 20px; border: 2px solid var(--border);
+    background: var(--card2); color: var(--muted); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .plat-btn.active { border-color: var(--accent); color: white; background: rgba(233,69,96,0.15); }
+  .plat-content { display: none; }
+  .plat-content.active { display: block; }
+
+  .content-block {
+    background: var(--card2); border-radius: 12px; padding: 18px; margin-bottom: 14px;
+  }
+  .content-block-title { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
+  .content-text {
+    background: #0a0a14; border-radius: 8px; padding: 12px;
+    font-size: 14px; line-height: 1.8; white-space: pre-wrap; word-break: break-all;
+  }
+  .hashtags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .hashtag { font-size: 12px; color: #60a5fa; background: rgba(96,165,250,0.1); padding: 3px 10px; border-radius: 20px; }
+  .copy-btn {
+    margin-top: 10px; padding: 8px 16px; background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.15); }
+
+  .restart-btn {
+    width: 100%; padding: 14px; background: var(--card2); border: 1px solid var(--border);
+    border-radius: 12px; color: var(--muted); font-size: 15px; cursor: pointer; transition: all 0.2s; margin-top: 8px;
+  }
+  .restart-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+    border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--green); color: white; padding: 10px 24px; border-radius: 24px;
+    font-size: 14px; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 9999;
+  }
+  #toast.show { opacity: 1; }
+
+  @media (max-width: 600px) {
+    .pipeline { gap: 0; }
+    .agent-node { min-width: 72px; padding: 10px 8px; }
+    .pipeline-arrow { padding: 0 2px; font-size: 14px; }
+    .topics-grid { grid-template-columns: 1fr 1fr; }
+    .platform-tabs { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎬 AI爆款内容策划 <span class="badge-live">● 实时热点</span><span class="badge">DeepSeek-V3</span></h1>
+  <p>抓取微博/知乎/抖音实时热点 → AI策划脚本 → 小红书/抖音/B站三平台文案 + Midjourney提示词</p>
+</div>
+
+<div class="container">
+
+  <!-- Step 1 -->
+  <div class="section" id="step1-section">
+    <div class="section-title"><span class="step-num">1</span>选择内容风格</div>
+    <div class="style-grid">
+      <div class="style-btn active" data-style="搞笑沙雕" onclick="selectStyle(this)"><span class="emoji">😂</span>搞笑沙雕</div>
+      <div class="style-btn" data-style="温情治愈" onclick="selectStyle(this)"><span class="emoji">🥺</span>温情治愈</div>
+      <div class="style-btn" data-style="职场干货" onclick="selectStyle(this)"><span class="emoji">💼</span>职场干货</div>
+      <div class="style-btn" data-style="恋爱甜蜜" onclick="selectStyle(this)"><span class="emoji">💕</span>恋爱甜蜜</div>
+      <div class="style-btn" data-style="悬疑反转" onclick="selectStyle(this)"><span class="emoji">🔮</span>悬疑反转</div>
+      <div class="style-btn" data-style="科技未来" onclick="selectStyle(this)"><span class="emoji">🚀</span>科技未来</div>
+    </div>
+    <button class="generate-btn" id="topics-btn" onclick="fetchTopics()">
+      🔥 抓取实时热点 · 生成爆款选题
+    </button>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="section" id="topics-section">
+    <div class="section-title"><span class="step-num">2</span>选择选题</div>
+    <div id="trend-banner" style="display:none;" class="trend-banner">
+      ✅ 已获取实时热点数据 · <span id="trends-used-text"></span>
+    </div>
+    <div class="topics-grid" id="topics-grid"></div>
+    <div class="custom-input-row">
+      <input type="text" id="custom-topic" placeholder="💡 或者输入你自己的选题创意..." />
+      <button onclick="useCustomTopic()">用这个</button>
+    </div>
+    <button class="generate-btn" id="create-btn" onclick="startCreation()" style="margin-top:14px; display:none;">
+      ✨ 开始AI策划
+    </button>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="section" id="pipeline-section">
+    <div class="section-title"><span class="step-num">3</span>AI多智能体创作流水线</div>
+    <div class="pipeline">
+      <div class="agent-node" id="agent-script">
+        <span class="emoji">📝</span>
+        <span class="name">脚本员</span>
+        <span class="status" id="status-script">等待中</span>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="agent-node" id="agent-prompt">
+        <span class="emoji">🎨</span>
+        <span class="name">提示词员</span>
+        <span class="status" id="status-prompt">等待中</span>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="agent-node" id="agent-caption">
+        <span class="emoji">📱</span>
+        <span class="name">多平台文案</span>
+        <span class="status" id="status-caption">等待中</span>
+      </div>
+    </div>
+    <div class="progress-log" id="progress-log">
+      <div>⏳ 准备启动创作流水线...</div>
+    </div>
+  </div>
+
+  <!-- Step 4: Results -->
+  <div class="section" id="result-section">
+    <div class="section-title"><span class="step-num">4</span>创作完成 🎉</div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('script', this)">📋 分镜脚本</button>
+      <button class="tab-btn" onclick="switchTab('prompts', this)">🎨 Midjourney提示词</button>
+      <button class="tab-btn" onclick="switchTab('captions', this)">📱 三平台文案</button>
+    </div>
+
+    <!-- Script Tab -->
+    <div class="tab-content active" id="tab-script">
+      <div class="script-header" id="script-header"></div>
+      <div id="scenes-list"></div>
+    </div>
+
+    <!-- Prompts Tab -->
+    <div class="tab-content" id="tab-prompts">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;padding:10px 14px;background:rgba(59,130,246,0.08);border-radius:8px;border:1px solid rgba(59,130,246,0.2);">
+        💡 <strong>使用说明：</strong>MJ提示词可直接粘贴到 Midjourney Discord 使用；中文提示词适合即梦AI、可灵AI、豆包等国内工具
+      </div>
+      <div id="prompts-list"></div>
+    </div>
+
+    <!-- Captions Tab -->
+    <div class="tab-content" id="tab-captions">
+      <div class="platform-tabs">
+        <button class="plat-btn active" onclick="switchPlat('xhs', this)">📕 小红书</button>
+        <button class="plat-btn" onclick="switchPlat('dy', this)">🎵 抖音</button>
+        <button class="plat-btn" onclick="switchPlat('bili', this)">📺 B站</button>
+      </div>
+      <div class="plat-content active" id="plat-xhs"></div>
+      <div class="plat-content" id="plat-dy"></div>
+      <div class="plat-content" id="plat-bili"></div>
+    </div>
+
+    <button class="restart-btn" onclick="restart()">🔄 重新开始，生成新内容</button>
+  </div>
+
+</div>
+
+<div id="toast">✅ 已复制</div>
+
+<script>
+  let selectedStyle = '搞笑沙雕';
+  let selectedTopic = null;
+  let resultData = null;
+
+  function selectStyle(el) {
+    document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    selectedStyle = el.dataset.style;
+  }
+
+  async function fetchTopics() {
+    const btn = document.getElementById('topics-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> 正在抓取实时热点...';
+
+    try {
+      const res = await fetch('/api/topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ style: selectedStyle })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.details || data.error || '获取失败');
+
+      // 显示热点来源
+      if (data.has_realtime && data.trends_used?.length) {
+        document.getElementById('trend-banner').style.display = 'flex';
+        document.getElementById('trends-used-text').textContent = `参考了 ${data.trends_used.slice(0,3).join('、')} 等热点`;
+      }
+
+      renderTopics(data.topics);
+      document.getElementById('topics-section').style.display = 'block';
+      document.getElementById('topics-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (e) {
+      alert('❌ 获取选题失败: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '🔄 换一批热点选题';
+    }
+  }
+
+  function renderTopics(topics) {
+    const grid = document.getElementById('topics-grid');
+    grid.innerHTML = topics.map(t => `
+      <div class="topic-card" onclick="selectTopic(this, ${JSON.stringify(t).replace(/"/g,'&quot;')})">
+        <div class="title">${t.title}</div>
+        <div class="hook">${t.hook}</div>
+        <div class="conflict">⚡ ${t.core_conflict || ''}</div>
+        <div class="meta">
+          <span class="platform">${t.best_platform || ''}</span>
+          <span class="viral-score">🔥 ${t.viral_score}/10</span>
+        </div>
+      </div>
+    `).join('');
+    selectedTopic = null;
+    document.getElementById('create-btn').style.display = 'none';
+  }
+
+  function selectTopic(el, topicObj) {
+    document.querySelectorAll('.topic-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedTopic = topicObj;
+    document.getElementById('create-btn').style.display = 'flex';
+  }
+
+  function useCustomTopic() {
+    const val = document.getElementById('custom-topic').value.trim();
+    if (!val) { alert('请输入选题内容'); return; }
+    selectedTopic = { title: val, scene_style: '现代都市', core_conflict: '' };
+    document.querySelectorAll('.topic-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('create-btn').style.display = 'flex';
+    document.getElementById('create-btn').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function startCreation() {
+    if (!selectedTopic) { alert('请先选择一个选题'); return; }
+
+    document.getElementById('pipeline-section').style.display = 'block';
+    document.getElementById('result-section').style.display = 'none';
+    document.getElementById('create-btn').disabled = true;
+    document.getElementById('pipeline-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    ['script','prompt','caption'].forEach(a => {
+      document.getElementById('agent-' + a).className = 'agent-node';
+      document.getElementById('status-' + a).textContent = '等待中';
+    });
+
+    const log = document.getElementById('progress-log');
+    log.innerHTML = '';
+    const addLog = (msg, cls='') => {
+      log.innerHTML += `<div class="${cls}">${msg}</div>`;
+      log.scrollTop = log.scrollHeight;
+    };
+
+    const setActive = name => {
+      document.getElementById('agent-' + name).className = 'agent-node active';
+      document.getElementById('status-' + name).textContent = '运行中...';
+    };
+    const setDone = name => {
+      document.getElementById('agent-' + name).className = 'agent-node done';
+      document.getElementById('status-' + name).textContent = '✅ 完成';
+    };
+
+    try {
+      addLog('🚀 启动 DeepSeek-V3 创作流水线...', 'log-active');
+      addLog(`📌 选题: ${selectedTopic.title}`);
+      addLog(`🎨 风格: ${selectedStyle}`);
+
+      setActive('script');
+      addLog('📝 脚本员: 正在生成5分镜脚本...', 'log-active');
+
+      const res = await fetch('/api/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: selectedTopic.title,
+          style: selectedStyle,
+          scene_style: selectedTopic.scene_style || '现代都市',
+          core_conflict: selectedTopic.core_conflict || ''
+        })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.details || data.error || '创作失败');
+
+      setDone('script');
+      addLog(`✅ 脚本完成: ${data.script?.scenes?.length || 0}个分镜`, 'log-ok');
+
+      setActive('prompt');
+      addLog('🎨 提示词员: 已生成Midjourney专业提示词', 'log-active');
+      setDone('prompt');
+      addLog(`✅ 提示词生成: ${data.prompts?.length || 0}个分镜`, 'log-ok');
+
+      setActive('caption');
+      addLog('📱 多平台文案员: 小红书/抖音/B站文案...', 'log-active');
+      setDone('caption');
+      addLog('✅ 三平台文案生成完成', 'log-ok');
+      addLog('');
+      addLog('🎉 策划完成！', 'log-ok');
+
+      resultData = data;
+      renderResults(data);
+
+    } catch (e) {
+      addLog('❌ 创作失败: ' + e.message);
+      document.getElementById('create-btn').disabled = false;
+    }
+  }
+
+  function renderResults(data) {
+    const { script, prompts, captions } = data;
+
+    // Script tab
+    const header = document.getElementById('script-header');
+    header.innerHTML = `
+      <h2>${script.title || ''}</h2>
+      <div class="hook-badge">🎣 开头钩子: ${script.hook || ''}</div>
+      <div style="font-size:13px;color:#94a3b8;margin-top:8px;">💡 核心爆点: ${script.core_joke || ''}</div>
+      <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:#94a3b8;flex-wrap:wrap;">
+        <span>🎬 ${script.scenes?.length || 0}个分镜</span>
+        <span>⏱️ ${script.total_duration || 0}秒</span>
+        <span>🎨 ${selectedStyle}</span>
+      </div>
+    `;
+
+    document.getElementById('scenes-list').innerHTML = (script.scenes || []).map(s => `
+      <div class="scene-card">
+        <div class="scene-num">${s.id}</div>
+        <div>
+          <div class="scene-dialogue">"${s.dialogue || ''}"</div>
+          ${s.caption ? `<div class="scene-caption">📺 字幕: ${s.caption}</div>` : ''}
+          <div class="scene-visual">🎥 ${s.visual || ''}</div>
+          <div class="scene-tags">
+            <span class="tag tag-emotion">😊 ${s.emotion || ''}</span>
+            <span class="tag tag-camera">📷 ${s.camera || ''}</span>
+            <span class="tag tag-time">⏱️ ${s.duration || 0}秒</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    // Prompts tab
+    document.getElementById('prompts-list').innerHTML = (prompts || []).map(p => `
+      <div class="prompt-card">
+        <div class="prompt-header">
+          <span class="prompt-title">分镜 ${p.scene_id}</span>
+          <span class="style-note">${p.style_note || ''}</span>
+        </div>
+        <div class="prompt-block">
+          <div class="prompt-label">🌐 Midjourney 提示词 <span class="tool-tag">MJ / Stable Diffusion</span></div>
+          <div class="prompt-text" id="mj-${p.scene_id}">${p.mj_prompt || ''}</div>
+          <button class="copy-inline" onclick="copyEl('mj-${p.scene_id}')">📋 复制</button>
+        </div>
+        <div class="prompt-block">
+          <div class="prompt-label">🇨🇳 中文提示词 <span class="tool-tag">即梦 / 可灵 / 豆包</span></div>
+          <div class="prompt-text" id="cn-${p.scene_id}" style="color:#86efac;">${p.cn_prompt || ''}</div>
+          <button class="copy-inline" onclick="copyEl('cn-${p.scene_id}')">📋 复制</button>
+        </div>
+      </div>
+    `).join('');
+
+    // Captions tab
+    if (captions) {
+      const xhs = captions.xiaohongshu;
+      const dy = captions.douyin;
+      const bili = captions.bilibili;
+
+      document.getElementById('plat-xhs').innerHTML = xhs ? `
+        <div class="content-block">
+          <div class="content-block-title">📌 标题</div>
+          <div class="content-text" id="xhs-title">${xhs.title || ''}</div>
+          <button class="copy-btn" onclick="copyEl('xhs-title')">📋 复制标题</button>
+        </div>
+        <div class="content-block">
+          <div class="content-block-title">📝 正文</div>
+          <div class="content-text" id="xhs-body">${xhs.body || ''}</div>
+          <button class="copy-btn" onclick="copyEl('xhs-body')">📋 复制正文</button>
+        </div>
+        <div class="content-block">
+          <div class="content-block-title"># 话题标签</div>
+          <div class="hashtags">${(xhs.hashtags || []).map(h => `<span class="hashtag">#${h}</span>`).join('')}</div>
+          <button class="copy-btn" onclick="copyText('${(xhs.hashtags || []).map(h=>'#'+h).join(' ')}')">📋 复制标签</button>
+        </div>
+      ` : '';
+
+      document.getElementById('plat-dy').innerHTML = dy ? `
+        <div class="content-block" style="border:1px solid rgba(233,69,96,0.2);">
+          <div class="content-block-title">🎣 开场钩子（前3秒）</div>
+          <div class="content-text" id="dy-hook" style="color:#fca5a5;font-size:16px;font-weight:700;">${dy.hook || ''}</div>
+          <button class="copy-btn" onclick="copyEl('dy-hook')">📋 复制</button>
+        </div>
+        <div class="content-block">
+          <div class="content-block-title">📝 完整文案</div>
+          <div class="content-text" id="dy-caption">${dy.caption || ''}</div>
+          <button class="copy-btn" onclick="copyEl('dy-caption')">📋 复制文案</button>
+        </div>
+        <div class="content-block">
+          <div class="content-block-title"># 话题标签</div>
+          <div class="hashtags">${(dy.hashtags || []).map(h => `<span class="hashtag">#${h}</span>`).join('')}</div>
+          <button class="copy-btn" onclick="copyText('${(dy.hashtags || []).map(h=>'#'+h).join(' ')}')">📋 复制标签</button>
+        </div>
+      ` : '';
+
+      document.getElementById('plat-bili').innerHTML = bili ? `
+        <div class="content-block">
+          <div class="content-block-title">📺 视频标题</div>
+          <div class="content-text" id="bili-title">${bili.title || ''}</div>
+          <button class="copy-btn" onclick="copyEl('bili-title')">📋 复制标题</button>
+        </div>
+        <div class="content-block">
+          <div class="content-block-title">📝 视频简介</div>
+          <div class="content-text" id="bili-desc">${bili.description || ''}</div>
+          <button class="copy-btn" onclick="copyEl('bili-desc')">📋 复制简介</button>
+        </div>
+        <div class="content-block">
+          <div class="content-block-title">🏷️ 标签 & 分区</div>
+          <div class="hashtags">${(bili.tags || []).map(h => `<span class="hashtag">${h}</span>`).join('')}</div>
+          <div style="margin-top:8px;font-size:12px;color:var(--muted);">📁 推荐分区: <strong style="color:var(--text);">${bili.partition || ''}</strong></div>
+        </div>
+      ` : '';
+    }
+
+    document.getElementById('result-section').style.display = 'block';
+    document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('create-btn').disabled = false;
+  }
+
+  function switchTab(name, el) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  function switchPlat(name, el) {
+    document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.plat-content').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('plat-' + name).classList.add('active');
+  }
+
+  function copyEl(id) {
+    const text = document.getElementById(id)?.textContent || '';
+    copyText(text);
+  }
+  function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    });
+  }
+
+  function restart() {
+    selectedTopic = null; resultData = null;
+    document.getElementById('topics-section').style.display = 'none';
+    document.getElementById('pipeline-section').style.display = 'none';
+    document.getElementById('result-section').style.display = 'none';
+    document.getElementById('create-btn').style.display = 'none';
+    document.getElementById('topics-btn').innerHTML = '🔥 抓取实时热点 · 生成爆款选题';
+    document.getElementById('topics-btn').disabled = false;
+    document.getElementById('custom-topic').value = '';
+    document.querySelectorAll('.topic-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('trend-banner').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
