@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 输出质量评估系统</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f0f1a;
+    --card: #1a1a2e;
+    --card2: #16213e;
+    --border: #2a2a4a;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --gold: #f59e0b;
+    --green: #10b981;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; min-height: 100vh; }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 24px 40px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .header-icon { font-size: 36px; }
+  .header-title { font-size: 24px; font-weight: 700; }
+  .header-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.4); color: #a78bfa; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-left: 16px; }
+
+  /* Layout */
+  .main { max-width: 960px; margin: 0 auto; padding: 40px 20px; }
+
+  /* Card */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; margin-bottom: 24px; }
+  .card-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+  .step-num { width: 28px; height: 28px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+
+  /* Form */
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
+  textarea, input[type="text"] {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); padding: 14px 16px; font-size: 14px; font-family: inherit;
+    resize: vertical; transition: border-color 0.2s;
+  }
+  textarea:focus, input[type="text"]:focus { outline: none; border-color: var(--accent); }
+  textarea { min-height: 100px; }
+  #contentInput { min-height: 180px; }
+
+  /* Dimensions */
+  .dims-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  .dim-item { display: flex; gap: 10px; align-items: center; }
+  .dim-item input { flex: 1; }
+  .dim-delete { background: none; border: 1px solid var(--border); color: var(--muted); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; font-size: 16px; transition: all 0.2s; flex-shrink: 0; }
+  .dim-delete:hover { border-color: var(--red); color: var(--red); }
+  .btn-add-dim { background: none; border: 1px dashed var(--border); color: var(--muted); padding: 10px; border-radius: 10px; width: 100%; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+  .btn-add-dim:hover { border-color: var(--accent); color: #a78bfa; }
+  .dim-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .preset-tag { background: var(--card2); border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+  .preset-tag:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* Submit */
+  .btn-evaluate {
+    width: 100%; padding: 18px; font-size: 17px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; border-radius: 14px; color: white; cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .btn-evaluate:hover { opacity: 0.9; }
+  .btn-evaluate:active { transform: scale(0.98); }
+  .btn-evaluate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Loading */
+  .loading { display: none; text-align: center; padding: 48px; }
+  .loading.show { display: block; }
+  .spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--muted); font-size: 14px; }
+
+  /* Results */
+  .results { display: none; }
+  .results.show { display: block; }
+
+  /* Score Summary */
+  .score-banner {
+    border-radius: 16px; padding: 28px 32px; margin-bottom: 24px;
+    display: flex; align-items: center; gap: 32px;
+    border: 1px solid;
+  }
+  .score-banner.excellent { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); }
+  .score-banner.good { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); }
+  .score-banner.poor { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); }
+  .score-circle { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; flex-shrink: 0; }
+  .score-banner.excellent .score-circle { background: rgba(16,185,129,0.2); color: #10b981; }
+  .score-banner.good .score-circle { background: rgba(245,158,11,0.2); color: #f59e0b; }
+  .score-banner.poor .score-circle { background: rgba(239,68,68,0.2); color: #ef4444; }
+  .score-info { flex: 1; }
+  .score-label { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .score-verdict { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .score-summary { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+  /* Dimension cards */
+  .dim-results { display: grid; gap: 16px; }
+  .dim-result-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+  .dim-result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .dim-result-name { font-size: 15px; font-weight: 700; }
+  .dim-score-badge { padding: 4px 14px; border-radius: 20px; font-size: 14px; font-weight: 700; }
+  .score-high { background: rgba(16,185,129,0.15); color: #10b981; }
+  .score-mid { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .score-low { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .dim-bar-wrap { height: 6px; background: var(--border); border-radius: 3px; margin-bottom: 16px; }
+  .dim-bar { height: 100%; border-radius: 3px; transition: width 1s ease; }
+  .dim-analysis { font-size: 14px; color: var(--muted); line-height: 1.8; margin-bottom: 12px; }
+  .dim-suggestion { background: var(--card2); border-left: 3px solid var(--accent); padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 13px; color: #c4b5fd; line-height: 1.7; }
+  .dim-suggestion-label { font-size: 11px; color: var(--accent); font-weight: 700; letter-spacing: 1px; margin-bottom: 4px; }
+
+  /* Final Advice */
+  .final-advice { background: var(--card2); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-top: 20px; }
+  .final-advice h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; color: var(--gold); }
+  .advice-text { font-size: 14px; color: var(--text); line-height: 1.9; }
+
+  /* Reset btn */
+  .btn-reset { display: block; margin: 24px auto 0; background: none; border: 1px solid var(--border); color: var(--muted); padding: 12px 32px; border-radius: 10px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+  .btn-reset:hover { border-color: var(--accent); color: #a78bfa; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🔍</div>
+  <div>
+    <div class="header-title">AI 输出质量评估系统
+      <span class="badge">⚡ DeepSeek-V3 评审</span>
+    </div>
+    <div class="header-sub">通用 AI 质检工具 · 用先进模型评估先进模型的输出</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Step 1: 任务描述 -->
+  <div class="card">
+    <div class="card-title"><div class="step-num">1</div> 任务背景描述</div>
+    <label>描述这段 AI 输出是用来干什么的（评估标准的依据）</label>
+    <textarea id="taskInput" placeholder="例如：这是一个短视频内容策划 AI 生成的5个分镜脚本，目标平台是抖音，风格搞笑沙雕，要求开头3秒有强钩子，台词每句不超过12字，结尾有反转…"></textarea>
+  </div>
+
+  <!-- Step 2: AI 输出内容 -->
+  <div class="card">
+    <div class="card-title"><div class="step-num">2</div> 粘贴待评估的 AI 输出</div>
+    <label>将需要评估的 AI 生成内容粘贴到此处</label>
+    <textarea id="contentInput" placeholder="粘贴 AI 生成的文本内容…"></textarea>
+  </div>
+
+  <!-- Step 3: 评估维度 -->
+  <div class="card">
+    <div class="card-title"><div class="step-num">3</div> 设定评估维度</div>
+    <label>快速添加预设维度：</label>
+    <div class="dim-presets">
+      <span class="preset-tag" onclick="addDim('准确性')">准确性</span>
+      <span class="preset-tag" onclick="addDim('完整性')">完整性</span>
+      <span class="preset-tag" onclick="addDim('创意性')">创意性</span>
+      <span class="preset-tag" onclick="addDim('格式规范')">格式规范</span>
+      <span class="preset-tag" onclick="addDim('逻辑清晰度')">逻辑清晰度</span>
+      <span class="preset-tag" onclick="addDim('钩子强度')">钩子强度</span>
+      <span class="preset-tag" onclick="addDim('台词字数合规')">台词字数合规</span>
+      <span class="preset-tag" onclick="addDim('平台适配性')">平台适配性</span>
+      <span class="preset-tag" onclick="addDim('数据支撑')">数据支撑</span>
+      <span class="preset-tag" onclick="addDim('可操作性')">可操作性</span>
+      <span class="preset-tag" onclick="addDim('情绪共鸣')">情绪共鸣</span>
+      <span class="preset-tag" onclick="addDim('反转设计')">反转设计</span>
+    </div>
+    <label>自定义维度列表：</label>
+    <div class="dims-list" id="dimsList"></div>
+    <button class="btn-add-dim" onclick="addDim('')">＋ 添加自定义维度</button>
+  </div>
+
+  <!-- Evaluate Button -->
+  <button class="btn-evaluate" id="evalBtn" onclick="startEval()">
+    <span>🚀</span> 开始 AI 质量评估
+  </button>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">DeepSeek-V3 正在深度分析中，通常需要 20-40 秒…</div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results"></div>
+
+</div>
+
+<script>
+// 默认维度
+const defaultDims = ['准确性', '完整性', '创意性', '格式规范', '逻辑清晰度'];
+defaultDims.forEach(d => addDim(d));
+
+function addDim(val = '') {
+  const list = document.getElementById('dimsList');
+  // 防重复
+  const existing = Array.from(list.querySelectorAll('input')).map(i => i.value.trim());
+  if (val && existing.includes(val)) return;
+
+  const div = document.createElement('div');
+  div.className = 'dim-item';
+  div.innerHTML = `
+    <input type="text" placeholder="输入评估维度，如：钩子强度" value="${val}">
+    <button class="dim-delete" onclick="this.parentElement.remove()">×</button>
+  `;
+  list.appendChild(div);
+  if (!val) div.querySelector('input').focus();
+}
+
+function getDims() {
+  return Array.from(document.querySelectorAll('.dim-item input'))
+    .map(i => i.value.trim()).filter(Boolean);
+}
+
+async function startEval() {
+  const task = document.getElementById('taskInput').value.trim();
+  const content = document.getElementById('contentInput').value.trim();
+  const dims = getDims();
+
+  if (!task) { alert('请填写任务背景描述'); return; }
+  if (!content) { alert('请粘贴待评估的 AI 输出内容'); return; }
+  if (dims.length === 0) { alert('请至少添加一个评估维度'); return; }
+
+  document.getElementById('evalBtn').disabled = true;
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('results').classList.remove('show');
+
+  try {
+    const resp = await fetch('/api/evaluate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task, content, dimensions: dims })
+    });
+    const data = await resp.json();
+    if (!data.success) throw new Error(data.details || data.error);
+    renderResults(data);
+  } catch (e) {
+    alert('评估失败：' + e.message);
+  } finally {
+    document.getElementById('evalBtn').disabled = false;
+    document.getElementById('loading').classList.remove('show');
+  }
+}
+
+function renderResults(data) {
+  const { overall_score, verdict, summary, dimensions, final_advice } = data;
+  const score = Math.round(overall_score);
+  const level = score >= 8 ? 'excellent' : score >= 6 ? 'good' : 'poor';
+  const levelText = score >= 8 ? '优秀' : score >= 6 ? '良好' : '需改进';
+
+  let html = `
+    <div class="score-banner ${level}">
+      <div class="score-circle">${score}</div>
+      <div class="score-info">
+        <div class="score-label">综合评分 / 10分</div>
+        <div class="score-verdict">${verdict} · ${levelText}</div>
+        <div class="score-summary">${summary}</div>
+      </div>
+    </div>
+    <div class="dim-results">
+  `;
+
+  dimensions.forEach(dim => {
+    const s = Math.round(dim.score);
+    const cls = s >= 8 ? 'score-high' : s >= 6 ? 'score-mid' : 'score-low';
+    const barColor = s >= 8 ? '#10b981' : s >= 6 ? '#f59e0b' : '#ef4444';
+    const pct = (s / 10 * 100).toFixed(0);
+    html += `
+      <div class="dim-result-card">
+        <div class="dim-result-header">
+          <div class="dim-result-name">📌 ${dim.name}</div>
+          <div class="dim-score-badge ${cls}">${s} / 10</div>
+        </div>
+        <div class="dim-bar-wrap"><div class="dim-bar" style="width:${pct}%;background:${barColor}"></div></div>
+        <div class="dim-analysis">${dim.analysis}</div>
+        <div class="dim-suggestion">
+          <div class="dim-suggestion-label">💡 改进建议</div>
+          ${dim.suggestion}
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+
+  if (final_advice) {
+    html += `
+      <div class="final-advice">
+        <h3>🎯 总体改进建议</h3>
+        <div class="advice-text">${final_advice}</div>
+      </div>
+    `;
+  }
+
+  html += `<button class="btn-reset" onclick="resetForm()">← 重新评估</button>`;
+
+  const container = document.getElementById('results');
+  container.innerHTML = html;
+  container.classList.add('show');
+  container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function resetForm() {
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('taskInput').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
